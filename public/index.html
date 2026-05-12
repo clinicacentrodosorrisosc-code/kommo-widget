@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orçamento — Kommo Widget</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F7F6F3;
+    --surface: #FFFFFF;
+    --border: #E8E6E0;
+    --border-strong: #D0CEC7;
+    --text: #1A1916;
+    --text-muted: #7A7870;
+    --text-faint: #B0AEA8;
+    --accent: #1A1916;
+    --green: #1E7A4A;
+    --green-bg: #EBF7F1;
+    --green-border: #A8DFC0;
+    --red: #B83232;
+    --red-bg: #FDF0F0;
+    --red-border: #F0B8B8;
+    --amber: #8A5C00;
+    --amber-bg: #FDF6E3;
+    --amber-border: #F0D890;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --font: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  .app { padding: 12px; max-width: 420px; margin: 0 auto; }
+
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .header-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .header-lead { font-size: 11px; color: var(--text-muted); font-family: var(--mono); }
+
+  .tabs {
+    display: flex; gap: 2px; margin-bottom: 14px;
+    background: var(--border); border-radius: var(--radius-sm);
+    padding: 3px;
+  }
+  .tab {
+    flex: 1; padding: 6px 4px; font-size: 12px; font-weight: 500;
+    border: none; background: none; cursor: pointer; border-radius: 4px;
+    color: var(--text-muted); font-family: var(--font); transition: all .15s;
+  }
+  .tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px; margin-bottom: 10px;
+  }
+  .card-label {
+    font-size: 10px; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--text-faint); margin-bottom: 10px;
+  }
+
+  .metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .metric { background: var(--bg); border-radius: var(--radius-sm); padding: 10px; text-align: center; }
+  .metric-label { font-size: 10px; color: var(--text-muted); margin-bottom: 3px; }
+  .metric-val { font-size: 15px; font-weight: 600; font-family: var(--mono); }
+  .metric-val.green { color: var(--green); }
+  .metric-val.red { color: var(--red); }
+
+  .progress-wrap { margin-bottom: 10px; }
+  .progress-header { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 5px; }
+  .progress-bar { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--green); border-radius: 99px; transition: width .4s ease; }
+
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 500;
+    padding: 2px 8px; border-radius: 99px;
+  }
+  .badge-open { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+  .badge-partial { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+  .badge-paid { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+
+  .item-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+  .item-row {
+    display: grid; grid-template-columns: 1fr 44px 80px 28px;
+    gap: 6px; align-items: center;
+  }
+  .item-desc { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-qty { font-size: 12px; color: var(--text-muted); text-align: center; font-family: var(--mono); }
+  .item-total { font-size: 13px; font-weight: 500; text-align: right; font-family: var(--mono); }
+  .item-remove {
+    width: 24px; height: 24px; border: none; background: none; cursor: pointer;
+    color: var(--text-faint); font-size: 16px; display: flex; align-items: center;
+    justify-content: center; border-radius: 4px; transition: all .15s;
+  }
+  .item-remove:hover { background: var(--red-bg); color: var(--red); }
+
+  .add-row {
+    display: grid; grid-template-columns: 1fr 44px 80px 28px;
+    gap: 6px; align-items: center; padding-top: 8px;
+    border-top: 1px dashed var(--border);
+  }
+
+  input, select {
+    width: 100%; padding: 7px 9px; font-size: 13px; font-family: var(--font);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text); outline: none;
+    transition: border .15s;
+  }
+  input:focus, select:focus { border-color: var(--accent); background: var(--surface); }
+  input::placeholder { color: var(--text-faint); }
+
+  .btn-add {
+    width: 28px; height: 32px; border: 1px solid var(--border); background: var(--surface);
+    border-radius: var(--radius-sm); cursor: pointer; font-size: 18px; color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center; transition: all .15s;
+  }
+  .btn-add:hover { border-color: var(--accent); color: var(--accent); background: var(--bg); }
+
+  .total-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-top: 1px solid var(--border); margin-top: 8px;
+    font-weight: 600; font-size: 14px;
+  }
+  .total-row span:last-child { font-family: var(--mono); }
+
+  .form-group { margin-bottom: 10px; }
+  .form-label { font-size: 11px; font-weight: 500; color: var(--text-muted); margin-bottom: 4px; display: block; }
+
+  .preview-box {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 10px;
+    font-size: 12px;
+  }
+  .preview-row { display: flex; justify-content: space-between; padding: 2px 0; }
+  .preview-row span:first-child { color: var(--text-muted); }
+  .preview-row span:last-child { font-family: var(--mono); font-weight: 500; }
+
+  .btn-primary {
+    width: 100%; padding: 10px; background: var(--accent); color: #fff;
+    border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
+    font-family: var(--font); cursor: pointer; transition: opacity .15s;
+  }
+  .btn-primary:hover { opacity: .85; }
+  .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+
+  .note-list { display: flex; flex-direction: column; gap: 8px; }
+  .note {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 10px 12px;
+  }
+  .note-meta { font-size: 10px; color: var(--text-faint); margin-bottom: 4px; font-family: var(--mono); }
+  .note-body { font-size: 12px; color: var(--text); line-height: 1.6; white-space: pre-wrap; }
+  .note-empty { font-size: 13px; color: var(--text-faint); text-align: center; padding: 20px 0; }
+
+  .toast {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--accent); color: #fff; padding: 9px 18px; border-radius: 99px;
+    font-size: 12px; font-weight: 500; transition: transform .3s ease; pointer-events: none;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  .sync-row {
+    display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+    background: var(--amber-bg); border: 1px solid var(--amber-border);
+    border-radius: var(--radius-sm); margin-bottom: 10px; font-size: 12px; color: var(--amber);
+  }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); flex-shrink: 0; }
+
+  .config-field { margin-bottom: 12px; }
+  .config-label { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: .06em; }
+  .config-hint { font-size: 11px; color: var(--text-faint); margin-top: 3px; }
+  .btn-save {
+    width: 100%; padding: 9px; background: var(--surface); color: var(--text);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 500; font-family: var(--font); cursor: pointer; transition: all .15s;
+  }
+  .btn-save:hover { background: var(--bg); }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="header">
+    <div>
+      <div class="header-title">Orçamento</div>
+      <div class="header-lead" id="lead-info">Carregando lead...</div>
+    </div>
+    <span class="badge badge-open" id="status-badge">Em aberto</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('orc')">Itens</button>
+    <button class="tab" onclick="showTab('baixa')">Baixa</button>
+    <button class="tab" onclick="showTab('hist')">Histórico</button>
+    <button class="tab" onclick="showTab('cfg')">Config.</button>
+  </div>
+
+  <div id="tab-orc" class="section active">
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">Total</div>
+        <div class="metric-val" id="m-total">0,00</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Recebido</div>
+        <div class="metric-val green" id="m-pago">0,00</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Saldo</div>
+        <div class="metric-val red" id="m-saldo">0,00</div>
+      </div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-header">
+        <span>Progresso</span>
+        <span id="pct-label">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Itens do orçamento</div>
+      <div class="item-list" id="item-list">
+        <div class="note-empty">Nenhum item ainda.</div>
+      </div>
+      <div class="add-row">
+        <input type="text" id="in-desc" placeholder="Descrição">
+        <input type="number" id="in-qty" placeholder="Qtd" min="1" value="1" style="text-align:center;">
+        <input type="number" id="in-price" placeholder="Valor">
+        <button class="btn-add" onclick="addItem()" title="Adicionar">+</button>
+      </div>
+      <div class="total-row">
+        <span>Total</span>
+        <span id="total-label">R$ 0,00</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-baixa" class="section">
+    <div class="card">
+      <div class="card-label">Registrar pagamento</div>
+      <div class="form-group">
+        <label class="form-label">Valor recebido (R$)</label>
+        <input type="number" id="in-baixa-val" placeholder="0,00" oninput="updatePreview()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Forma de pagamento</label>
+        <select id="in-baixa-forma">
+          <option>PIX</option>
+          <option>Transferência bancária</option>
+          <option>Boleto</option>
+          <option>Cartão de crédito</option>
+          <option>Cartão de débito</option>
+          <option>Dinheiro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Observação (opcional)</label>
+        <input type="text" id="in-baixa-obs" placeholder="Ex: 1ª parcela, sinal...">
+      </div>
+      <div class="preview-box">
+        <div class="preview-row"><span>Saldo atual</span><span id="prev-saldo-atual">R$ 0,00</span></div>
+        <div class="preview-row"><span>Valor desta baixa</span><span id="prev-valor">R$ 0,00</span></div>
+        <div class="preview-row" style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;">
+          <span>Saldo após baixa</span><span id="prev-saldo-apos" style="color:var(--red);">R$ 0,00</span>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="registrarBaixa()">Registrar baixa</button>
+    </div>
+  </div>
+
+  <div id="tab-hist" class="section">
+    <div class="card">
+      <div class="card-label">Notas geradas</div>
+      <div id="hist-list"><div class="note-empty">Nenhuma baixa registrada.</div></div>
+    </div>
+  </div>
+
+  <div id="tab-cfg" class="section">
+    <div class="card">
+      <div class="card-label">Integração com o Kommo</div>
+      <div id="sync-status" class="sync-row">
+        <div class="sync-dot"></div>
+        <span>Configure os campos abaixo para sincronizar com o Kommo.</span>
+      </div>
+      <div class="config-field">
+        <label class="config-label">ID campo — Orçamento Total</label>
+        <input type="text" id="cfg-total" placeholder="Ex: 123456">
+        <div class="config-hint">Vá em Configurações → Campos → copie o ID do campo numérico.</div>
+      </div>
+      <div class="config-field">
+        <label class="config-label">ID campo — Valor Pago</label>
+        <input type="text" id="cfg-pago" placeholder="Ex: 123457">
+      </div>
+      <div class="config-field">
+        <label class="config-label">ID campo — Saldo Devedor</label>
+        <input type="text" id="cfg-saldo" placeholder="Ex: 123458">
+      </div>
+      <div class="config-field">
+        <label class="config-label">ID campo — Itens (texto longo)</label>
+        <input type="text" id="cfg-itens" placeholder="Ex: 123459">
+      </div>
+      <button class="btn-save" onclick="saveConfig()">Salvar configuração</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const S = {
+    items: [],
+    historico: [],
+    totalPago: 0,
+    leadId: null,
+    cfg: { total: '', pago: '', saldo: '', itens: '' }
+  };
+
+  function loadStorage() {
+    try {
+      const d = localStorage.getItem('kommo_orc');
+      if (d) Object.assign(S, JSON.parse(d));
+    } catch(e) {}
+    try {
+      const c = localStorage.getItem('kommo_cfg');
+      if (c) S.cfg = JSON.parse(c);
+    } catch(e) {}
+  }
+
+  function saveStorage() {
+    localStorage.setItem('kommo_orc_' + (S.leadId||'default'), JSON.stringify({
+      items: S.items, historico: S.historico, totalPago: S.totalPago
+    }));
+  }
+
+  function loadLead() {
+    try {
+      if (window.AMOCRM && window.AMOCRM.getParam) {
+        S.leadId = window.AMOCRM.getParam('lead_id') || window.AMOCRM.getParam('ID');
+      }
+      if (!S.leadId && window.location.search) {
+        const p = new URLSearchParams(window.location.search);
+        S.leadId = p.get('lead_id') || p.get('id');
+      }
+    } catch(e) {}
+    const stored = localStorage.getItem('kommo_orc_' + (S.leadId||'default'));
+    if (stored) {
+      try { const d = JSON.parse(stored); S.items = d.items||[]; S.historico = d.historico||[]; S.totalPago = d.totalPago||0; } catch(e) {}
+    }
+    document.getElementById('lead-info').textContent = S.leadId ? 'Lead #' + S.leadId : 'modo demo';
+  }
+
+  function fmt(v) {
+    return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function total() { return S.items.reduce((s, i) => s + i.qty * i.price, 0); }
+  function saldo() { return Math.max(0, total() - S.totalPago); }
+
+  function recalc() {
+    const t = total(), p = S.totalPago, sl = saldo();
+    const pct = t > 0 ? Math.round((p / t) * 100) : 0;
+    document.getElementById('m-total').textContent = Number(t).toLocaleString('pt-BR',{minimumFractionDigits:2});
+    document.getElementById('m-pago').textContent = Number(p).toLocaleString('pt-BR',{minimumFractionDigits:2});
+    document.getElementById('m-saldo').textContent = Number(sl).toLocaleString('pt-BR',{minimumFractionDigits:2});
+    document.getElementById('pct-label').textContent = pct + '%';
+    document.getElementById('progress-fill').style.width = Math.min(pct, 100) + '%';
+    document.getElementById('total-label').textContent = fmt(t);
+    const badge = document.getElementById('status-badge');
+    if (sl === 0 && t > 0) { badge.textContent = 'Quitado'; badge.className = 'badge badge-paid'; }
+    else if (p > 0) { badge.textContent = 'Parcial'; badge.className = 'badge badge-partial'; }
+    else { badge.textContent = 'Em aberto'; badge.className = 'badge badge-open'; }
+    updatePreview();
+    renderItems();
+    renderHist();
+    saveStorage();
+    syncKommo();
+  }
+
+  function renderItems() {
+    const el = document.getElementById('item-list');
+    if (!S.items.length) { el.innerHTML = '<div class="note-empty">Nenhum item ainda.</div>'; return; }
+    el.innerHTML = S.items.map((it, i) => `
+      <div class="item-row">
+        <span class="item-desc" title="${it.desc}">${it.desc}</span>
+        <span class="item-qty">${it.qty}x</span>
+        <span class="item-total">${fmt(it.qty * it.price)}</span>
+        <button class="item-remove" onclick="removeItem(${i})" title="Remover">×</button>
+      </div>`).join('');
+  }
+
+  function addItem() {
+    const desc = document.getElementById('in-desc').value.trim();
+    const qty = parseFloat(document.getElementById('in-qty').value) || 1;
+    const price = parseFloat(document.getElementById('in-price').value) || 0;
+    if (!desc || price <= 0) { toast('Preencha descrição e valor.'); return; }
+    S.items.push({ desc, qty, price });
+    document.getElementById('in-desc').value = '';
+    document.getElementById('in-qty').value = '1';
+    document.getElementById('in-price').value = '';
+    recalc();
+  }
+
+  function removeItem(i) { S.items.splice(i, 1); recalc(); }
+
+  function updatePreview() {
+    const sl = saldo();
+    const v = parseFloat(document.getElementById('in-baixa-val')?.value) || 0;
+    const apos = Math.max(0, sl - v);
+    document.getElementById('prev-saldo-atual').textContent = fmt(sl);
+    document.getElementById('prev-valor').textContent = fmt(v);
+    const el = document.getElementById('prev-saldo-apos');
+    el.textContent = fmt(apos);
+    el.style.color = apos === 0 ? 'var(--green)' : 'var(--red)';
+  }
+
+  function registrarBaixa() {
+    const v = parseFloat(document.getElementById('in-baixa-val').value) || 0;
+    const forma = document.getElementById('in-baixa-forma').value;
+    const obs = document.getElementById('in-baixa-obs').value.trim();
+    if (v <= 0) { toast('Informe um valor válido.'); return; }
+    const sl = saldo();
+    if (v > sl + 0.01) { toast('Valor maior que o saldo devedor.'); return; }
+    S.totalPago = Math.min(S.totalPago + v, total());
+    const novoSaldo = saldo();
+    const now = new Date();
+    const dataHora = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const nota = [
+      `Pagamento registrado — ${forma}`,
+      `Valor: ${fmt(v)}`,
+      obs ? `Obs: ${obs}` : null,
+      `Saldo restante: ${fmt(novoSaldo)}`,
+      novoSaldo === 0 ? `✓ Orçamento quitado!` : null
+    ].filter(Boolean).join('\n');
+    S.historico.unshift({ dataHora, nota });
+    document.getElementById('in-baixa-val').value = '';
+    document.getElementById('in-baixa-obs').value = '';
+    recalc();
+    showTab('hist');
+    toast(novoSaldo === 0 ? 'Orçamento quitado!' : 'Baixa registrada!');
+  }
+
+  function renderHist() {
+    const el = document.getElementById('hist-list');
+    if (!S.historico.length) { el.innerHTML = '<div class="note-empty">Nenhuma baixa registrada.</div>'; return; }
+    el.innerHTML = S.historico.map(h => `
+      <div class="note">
+        <div class="note-meta">${h.dataHora}</div>
+        <div class="note-body">${h.nota}</div>
+      </div>`).join('');
+  }
+
+  function saveConfig() {
+    S.cfg = {
+      total: document.getElementById('cfg-total').value.trim(),
+      pago: document.getElementById('cfg-pago').value.trim(),
+      saldo: document.getElementById('cfg-saldo').value.trim(),
+      itens: document.getElementById('cfg-itens').value.trim()
+    };
+    localStorage.setItem('kommo_cfg', JSON.stringify(S.cfg));
+    toast('Configuração salva!');
+    const s = document.getElementById('sync-status');
+    s.style.background = 'var(--green-bg)'; s.style.borderColor = 'var(--green-border)';
+    s.style.color = 'var(--green)';
+    s.innerHTML = '<div class="sync-dot" style="background:var(--green)"></div><span>Campos configurados. Próxima baixa sincronizará automaticamente.</span>';
+  }
+
+  function syncKommo() {
+    if (!S.leadId || !S.cfg.total) return;
+    try {
+      if (window.AMOCRM && window.AMOCRM.setParam) {
+        if (S.cfg.total) window.AMOCRM.setParam('leads[' + S.leadId + '][custom_fields][' + S.cfg.total + '][values][0][value]', total());
+        if (S.cfg.pago)  window.AMOCRM.setParam('leads[' + S.leadId + '][custom_fields][' + S.cfg.pago  + '][values][0][value]', S.totalPago);
+        if (S.cfg.saldo) window.AMOCRM.setParam('leads[' + S.leadId + '][custom_fields][' + S.cfg.saldo + '][values][0][value]', saldo());
+        if (S.cfg.itens) window.AMOCRM.setParam('leads[' + S.leadId + '][custom_fields][' + S.cfg.itens + '][values][0][value]',
+          S.items.map(i => i.desc + ' (' + i.qty + 'x ' + fmt(i.price) + ')').join('; '));
+      }
+    } catch(e) {}
+  }
+
+  function showTab(name) {
+    ['orc','baixa','hist','cfg'].forEach((t, i) => {
+      document.querySelectorAll('.tab')[i].classList.toggle('active', t === name);
+      document.getElementById('tab-' + t).classList.toggle('active', t === name);
+    });
+  }
+
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2500);
+  }
+
+  loadStorage();
+  loadLead();
+  document.getElementById('cfg-total').value = S.cfg.total || '';
+  document.getElementById('cfg-pago').value  = S.cfg.pago  || '';
+  document.getElementById('cfg-saldo').value = S.cfg.saldo || '';
+  document.getElementById('cfg-itens').value = S.cfg.itens || '';
+  recalc();
+</script>
+</body>
+</html>
