@@ -1,10 +1,17 @@
 {
   "widget": {
     "name": "Orçamento",
-    "description": "Crie orçamentos e registre baixas parciais diretamente no lead.",
-    "version": "1.0.0",
+    "description": "Crie orçamentos e registre baixas parciais no lead.",
+    "version": "1.1.0",
     "interface": "sidebar",
+    "areas": ["ccard", "clist"],
     "init_once": false,
-    "settings": {}
+    "settings": {},
+    "i18n": {
+      "pt": {
+        "title": "Orçamento",
+        "description": "Crie orçamentos e registre baixas parciais no lead."
+      }
+    }
   }
 }
